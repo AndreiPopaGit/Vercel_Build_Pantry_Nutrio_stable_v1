@@ -1,103 +1,146 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import TopBar from "@/components/TopBar";
+import { Column } from "@/components/Board";
+import type { Item, Col, Unit } from "@/constant/items";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "../../lib/supabaseClient";
+import { fetchItems, insertItem, moveItem as moveItemDB, deleteItem as deleteItemDB, updateItem as updateItemDB } from "../../lib/pantry";
+
+export default function Page() {
+  const [items, setItems] = useState<Item[]>([]);
+  const [ready, setReady] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { router.replace("/auth"); return; }
+      try {
+        const rows = await fetchItems();
+        if (mounted) setItems(rows);
+      } catch (e) {
+        console.error("fetch error:", e);
+      } finally {
+        if (mounted) setReady(true);
+      }
+    })();
+    return () => { mounted = false; };
+  }, [router]);
+
+  const byCol = useMemo(
+    () => items.reduce<Record<Col, Item[]>>(
+      (acc, it) => ((acc[it.col].push(it), acc)),
+      { freezer: [], fridge: [], pantry: [] }
+    ),
+    [items]
+  );
+
+  const patchLocal = (id: string, patch: Partial<Item>) =>
+    setItems(xs => xs.map(x => x.id === id ? { ...x, ...patch } : x));
+  const removeLocal = (id: string) =>
+    setItems(xs => xs.filter(x => x.id !== id));
+
+  /* ADD (persisted) */
+  const addItem = async (payload: Omit<Item, "id">) => {
+    const tempId = crypto.randomUUID?.() ?? String(Date.now());
+    setItems(xs => [{ id: tempId, ...payload }, ...xs]);
+    try {
+      const saved = await insertItem(payload);
+      setItems(xs => xs.map(x => x.id === tempId ? saved : x));
+    } catch (e) {
+      console.error("insert error:", e);
+      removeLocal(tempId);
+    }
+  };
+
+  /* MOVE (persisted) */
+  const moveItem = async (id: string, target: Col) => {
+    const prev = items.find(x => x.id === id);
+    if (!prev) return;
+    patchLocal(id, { col: target });
+    try {
+      const saved = await moveItemDB(id, target);
+      patchLocal(id, { col: saved.col });
+    } catch (e) {
+      console.error("move error:", e);
+      patchLocal(id, { col: prev.col });
+    }
+  };
+
+  /* DELETE (persisted) */
+  const removeItem = async (id: string) => {
+    const prev = items.find(x => x.id === id);
+    if (!prev) return;
+    removeLocal(id);
+    try {
+      await deleteItemDB(id);
+    } catch (e) {
+      console.error("delete error:", e);
+      // rollback
+      setItems(xs => [prev, ...xs]);
+    }
+  };
+
+  /* EDIT (persisted: qty, unit, category, subtype, expiresAt, name) */
+  const saveEdit = async (id: string, patch: Partial<Item>) => {
+    const prev = items.find(x => x.id === id);
+    if (!prev) return;
+    patchLocal(id, patch);
+    try {
+      const saved = await updateItemDB(id, patch);
+      patchLocal(id, saved); // ensure exact DB snapshot
+    } catch (e) {
+      console.error("update error:", e);
+      patchLocal(id, prev); // rollback
+    }
+  };
+
+  const handlers = {
+    onDelete: removeItem,
+    onToggleUnit: (id: string, u: Unit) => saveEdit(id, { unit: u }),
+    onQty: (id: string, value: number) => saveEdit(id, { quantity: value }),
+    onMove: (id: string, c: Col) => void moveItem(id, c),
+  };
+
+  if (!ready) return null;
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div className="flex h-full flex-col">
+      <TopBar />
+      <div className="mx-auto max-w-7xl flex-1 overflow-auto px-4 py-6">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <Column
+            title="Freezer"
+            tint="blue"
+            colKey="freezer"
+            items={byCol.freezer}
+            handlers={handlers}
+            onAdd={addItem}
+            onEditSave={saveEdit}
+          />
+          <Column
+            title="Fridge"
+            tint="green"
+            colKey="fridge"
+            items={byCol.fridge}
+            handlers={handlers}
+            onAdd={addItem}
+            onEditSave={saveEdit}
+          />
+          <Column
+            title="Pantry / Consumables"
+            tint="orange"
+            colKey="pantry"
+            items={byCol.pantry}
+            handlers={handlers}
+            onAdd={addItem}
+            onEditSave={saveEdit}
+          />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </div>
     </div>
   );
 }
