@@ -19,6 +19,6 @@
       "@/*": ["./src/*"]            // or ["./*"] if you don’t use /src
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "src/app/consumption/page.jsx", "src/app/consumption/page.jsx", "src/app/consumption/page.jsx"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "src/app/consumption/page.jsx", "src/app/consumption/page.jsx", "src/app/consumption/page.jsx", "src/constant/ConsumptionDummy.jsx"],
   "exclude": ["node_modules"]
 }
