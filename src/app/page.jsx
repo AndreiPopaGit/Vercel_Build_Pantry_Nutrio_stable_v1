@@ -1,14 +1,14 @@
 "use client";
 import React, { useState } from 'react';
-import { usePantry } from '../../hooks/usePantry';
+import { usePantry } from '../hooks/usePantry';
 
-import Header from '../../components/consumption/Header';
-import InventoryPage from '../../components/consumption/InventoryPage';
-import DailyLogPage from '../../components/consumption/DailyLogPage';
-import ItemModal from '../../components/consumption/modals/Item';
-import MoveItemModal from '../../components/consumption/modals/MoveItem';
-import LogFromInventoryModal from '../../components/consumption/modals/LogFromInventory';
-import ConfirmationModal from '../../components/consumption/modals/Confirmation';
+import Header from '../components/consumption/Header';
+import InventoryPage from '../components/consumption/InventoryPage';
+import DailyLogPage from '../components/consumption/DailyLogPage';
+import ItemModal from '../components/consumption/modals/Item';
+import MoveItemModal from '../components/consumption/modals/MoveItem';
+import LogFromInventoryModal from '../components/consumption/modals/LogFromInventory';
+import ConfirmationModal from '../components/consumption/modals/Confirmation';
 
 export default function App() {
   const [page, setPage] = useState('inventory');
