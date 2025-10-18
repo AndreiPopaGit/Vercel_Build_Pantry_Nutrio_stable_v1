@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { XIcon } from '../../../components/consumption/SVGIcons';
-import { CATEGORIES, UNITS, LOCATIONS } from '../../../constant/ConsumptionDummy';
+import { CATEGORIES, UNITS, LOCATIONS } from '../../../constant/categories';
 
 const ItemModal = ({ isOpen, onClose, onSave, item }) => {
     const [formData, setFormData] = useState({});
@@ -36,7 +36,8 @@ const ItemModal = ({ isOpen, onClose, onSave, item }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-40 flex justify-center items-start pt-16">
+        // FIX: Replaced Tailwind opacity classes with a direct RGBA background for reliable transparency.
+        <div className="fixed inset-0 bg-[rgba(0,0,0,0.4)] z-40 flex justify-center items-start pt-16">
             <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md m-4">
                  <div className="flex justify-between items-center mb-4">
                      <h2 className="text-2xl font-bold text-stone-800">{item ? 'Edit Item' : 'Add New Item'}</h2>
@@ -52,7 +53,7 @@ const ItemModal = ({ isOpen, onClose, onSave, item }) => {
                     </div>
                     <div>
                         <label htmlFor="expiryDate" className="block text-sm font-medium text-stone-700">Expiry Date</label>
-                        <input type="date" name="expiryDate" id="expiryDate" value={formData.expiryDate || ''} onChange={handleChange} className="w-full p-2 border-stone-300 border rounded mt-1" required />
+                        <input type="date" name="expiryDate" id="expiryDate" value={formData.expiryDate || ''} onChange={handleChange} className="w-full p-2 border-stone-300 border rounded mt-1" />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                          <select name="category" value={formData.category || ''} onChange={handleCategoryChange} className="w-full p-2 border-stone-300 border rounded">

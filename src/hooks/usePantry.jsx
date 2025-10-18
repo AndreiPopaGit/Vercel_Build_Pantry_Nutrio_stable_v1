@@ -1,19 +1,21 @@
 import { useState, useEffect } from 'react';
-// FIX: Updated the import path to match your project structure
+// Assuming this is the correct path from your project structure
 import { supabase } from '../../lib/supabaseClient';
 
 /**
  * This hook manages all application state and data logic,
- * including fetching from and writing to the Supabase database.
+ * including full CRUD functionality for the Supabase database.
  */
 export const usePantry = () => {
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [logEntries, setLogEntries] = useState([]);
+  const [logEntries, setLogEntries] = useState([]); // Kept for UI compatibility
 
-  // This function fetches data from your `pantry_items` table.
+  /**
+   * READ: Fetches all items from the `pantry_items` table for the current user.
+   */
   const fetchInventory = async () => {
-    // We don't set loading to true here, so the screen doesn't flicker on re-fetch
+    // We don't use setLoading here to prevent screen flicker on re-fetches
     const { data, error } = await supabase
       .from('pantry_items')
       .select('*')
@@ -23,93 +25,98 @@ export const usePantry = () => {
       console.error('Error fetching inventory:', error);
       setInventory([]);
     } else if (data) {
+      // Map DB names to component prop names
       const mappedData = data.map(item => ({
         ...item,
-        // FIX: Format the full timestamp to "YYYY-MM-DD" for the date input field
         expiryDate: item.expires_at ? item.expires_at.split('T')[0] : '',
         location: item.storage ? item.storage.charAt(0).toUpperCase() + item.storage.slice(1) : '',
-        subcategory: item.subtype
+        subcategory: item.subtype,
       }));
       setInventory(mappedData);
     }
-    setLoading(false); // Only set loading to false after the initial fetch
+    setLoading(false);
   };
 
-  // This useEffect runs once when the app loads to fetch the initial data.
+  // Initial fetch on component mount
   useEffect(() => {
     fetchInventory();
   }, []);
 
-  // --- NEWLY IMPLEMENTED FUNCTION ---
+  /**
+   * CREATE / UPDATE: Inserts or updates an item in the `pantry_items` table.
+   */
   const handleSaveItem = async (itemData) => {
-    // 1. Get the current user from Supabase auth
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       console.error("No user logged in to save item.");
-      // Optionally, show a message to the user
       return;
     }
 
-    // FIX: Map UI-friendly unit names to database enum values
+    // Map UI-friendly unit names to the database enum values ('g', 'pcs')
     const unitMap = {
       grams: 'g',
-      kg: 'kg',
-      liters: 'l',
-      ml: 'ml',
       units: 'pcs',
     };
-    const dbUnit = unitMap[itemData.unit] || itemData.unit; // Convert "grams" to "g", etc.
+    const dbUnit = unitMap[itemData.unit] || itemData.unit;
 
+    const payload = {
+      name: itemData.name,
+      storage: itemData.location.toLowerCase(),
+      category: itemData.category,
+      subtype: itemData.subcategory,
+      quantity: itemData.quantity,
+      unit: dbUnit,
+      expires_at: itemData.expiryDate,
+      user_id: user.id,
+    };
 
-    // 2. Check if we are UPDATING an existing item or CREATING a new one
     if (itemData.id) {
-      // --- UPDATE LOGIC ---
-      const { error } = await supabase
-        .from('pantry_items')
-        .update({
-          name: itemData.name,
-          storage: itemData.location.toLowerCase(), // 'Fridge' -> 'fridge'
-          category: itemData.category,
-          subtype: itemData.subcategory,
-          quantity: itemData.quantity,
-          unit: dbUnit, // Use the mapped database unit
-          expires_at: itemData.expiryDate,
-        })
-        .eq('id', itemData.id); // Find the row where the 'id' matches
-
-      if (error) {
-        console.error('Error updating item:', error);
-      }
+      const { error } = await supabase.from('pantry_items').update(payload).eq('id', itemData.id);
+      if (error) console.error('Error updating item:', error);
     } else {
-      // --- CREATE (INSERT) LOGIC ---
-      const { error } = await supabase
-        .from('pantry_items')
-        .insert([{
-          // Map component state to database columns
-          name: itemData.name,
-          storage: itemData.location.toLowerCase(),
-          category: itemData.category,
-          subtype: itemData.subcategory,
-          quantity: itemData.quantity,
-          unit: dbUnit, // Use the mapped database unit
-          expires_at: itemData.expiryDate,
-          user_id: user.id // Assign the item to the currently logged-in user
-        }]);
-
-      if (error) {
-        console.error('Error inserting item:', error);
-      }
+      const { error } = await supabase.from('pantry_items').insert([payload]);
+      if (error) console.error('Error inserting item:', error);
     }
-
-    // 3. After saving, re-fetch the inventory to show the latest data
     await fetchInventory();
   };
 
-  // --- Other functions are still placeholders ---
-  const handleDeleteItem = async (itemId) => { console.log("Next step: Delete item", itemId); };
-  const handleMoveItem = async (itemId, newLocation) => { console.log("Next step: Move item", itemId, newLocation); };
-  const handleSaveLogEntry = async (entry) => { console.log("Next step: Save log", entry); };
-  const handleDeleteLogEntry = async (entryId) => { console.log("Next step: Delete log", entryId); };
+  /**
+   * DELETE: Performs a hard delete on an item from the database.
+   */
+  const handleDeleteItem = async (itemId) => {
+    const { error } = await supabase
+      .from('pantry_items')
+      .delete() // Use .delete() for a hard delete
+      .eq('id', itemId);
+
+    if (error) {
+      console.error('Error deleting item:', error);
+    } else {
+      // Optimistic UI update for faster response, then re-fetch
+      setInventory(currentInventory => currentInventory.filter(item => item.id !== itemId));
+      await fetchInventory(); 
+    }
+  };
+
+  /**
+   * UPDATE (Move): Updates the `storage` of an item.
+   */
+  const handleMoveItem = async (itemId, newLocation) => {
+    const { error } = await supabase
+      .from('pantry_items')
+      .update({ storage: newLocation.toLowerCase() })
+      .eq('id', itemId);
+
+    if (error) {
+      console.error('Error moving item:', error);
+    } else {
+      await fetchInventory();
+    }
+  };
+
+  // --- Daily Log functions are placeholders for the next step ---
+  const handleSaveLogEntry = async (entry) => { console.log("Next step: Save daily log entry", entry); };
+  const handleDeleteLogEntry = async (entryId) => { console.log("Next step: Delete daily log entry", entryId); };
 
   return {
     inventory,
