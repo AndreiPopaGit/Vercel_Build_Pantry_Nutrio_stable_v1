@@ -6,7 +6,6 @@ import Header from '../components/consumption/Header';
 import InventoryPage from '../components/consumption/InventoryPage';
 import DailyLogPage from '../components/consumption/DailyLogPage';
 import ItemModal from '../components/consumption/modals/Item';
-import MoveItemModal from '../components/consumption/modals/MoveItem';
 import LogFromInventoryModal from '../components/consumption/modals/LogFromInventory';
 import ConfirmationModal from '../components/consumption/modals/Confirmation';
 
@@ -19,8 +18,6 @@ export default function App() {
   // State for managing modals
   const [isItemModalOpen, setItemModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
-  const [isMoveModalOpen, setMoveModalOpen] = useState(false);
-  const [movingItem, setMovingItem] = useState(null);
   const [logItemModal, setLogItemModal] = useState({ isOpen: false, item: null, meal: null });
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, onConfirm: null, message: '' });
 
@@ -32,10 +29,6 @@ export default function App() {
   const handleOpenEditModal = (item) => {
     setEditingItem(item);
     setItemModalOpen(true);
-  };
-  const handleOpenMoveModal = (item) => {
-    setMovingItem(item);
-    setMoveModalOpen(true);
   };
   const handleOpenLogItemModal = (item, meal = null) => {
     setLogItemModal({ isOpen: true, item: item, meal: meal });
@@ -50,12 +43,6 @@ export default function App() {
     setItemModalOpen(false);
     setEditingItem(null);
   };
-  
-  const handleMoveItemAndClose = (itemId, newLocation) => {
-    pantry.handleMoveItem(itemId, newLocation);
-    setMoveModalOpen(false);
-    setMovingItem(null);
-  }
 
   const handleSaveLogAndClose = (entry) => {
       pantry.handleSaveLogEntry(entry);
@@ -93,7 +80,7 @@ export default function App() {
             onAdd={handleOpenAddModal}
             onEdit={handleOpenEditModal}
             onDelete={handleDeleteItem}
-            onMove={handleOpenMoveModal}
+            onMove={pantry.handleMoveItem}
             onLogItem={handleOpenLogItemModal}
           />
         )}
@@ -110,7 +97,6 @@ export default function App() {
 
        {/* --- Modals --- */}
        <ItemModal isOpen={isItemModalOpen} onClose={() => setItemModalOpen(false)} onSave={handleSaveItemAndClose} item={editingItem}/>
-       <MoveItemModal isOpen={isMoveModalOpen} onClose={() => setMoveModalOpen(false)} onMove={handleMoveItemAndClose} item={movingItem} />
        <LogFromInventoryModal 
             isOpen={logItemModal.isOpen}
             onClose={() => setLogItemModal({ isOpen: false, item: null, meal: null })}

@@ -41,7 +41,7 @@ const LogFromInventoryModal = ({ isOpen, onClose, onSave, item, initialMeal }) =
     if (!isOpen || !item) return null;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-start pt-16">
+        <div className="fixed inset-0 bg-[rgba(0,0,0,0.4)] z-50 flex justify-center items-start pt-16">
             <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md m-4">
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-2xl font-bold text-stone-800">Log "{item.name}"</h2>

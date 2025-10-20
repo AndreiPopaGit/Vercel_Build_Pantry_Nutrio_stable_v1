@@ -7,16 +7,21 @@ const ItemModal = ({ isOpen, onClose, onSave, item }) => {
     const [subcategories, setSubcategories] = useState([]);
 
     useEffect(() => {
+        const initialCategory = item ? item.category : Object.keys(CATEGORIES)[0];
+        const initialSubcategories = CATEGORIES[initialCategory] || [];
+        const initialSubcategory = item ? item.subcategory : initialSubcategories[0] || '';
+
         const initialData = item || {
-            name: '', quantity: '', unit: UNITS[0], expiryDate: '', category: Object.keys(CATEGORIES)[0], subcategory: '', location: LOCATIONS[0]
+            name: '',
+            quantity: '',
+            unit: UNITS[0],
+            expiryDate: '',
+            category: initialCategory,
+            subcategory: initialSubcategory,
+            location: LOCATIONS[0]
         };
         setFormData(initialData);
-
-        if (initialData.category) {
-            setSubcategories(CATEGORIES[initialData.category] || []);
-        } else {
-             setSubcategories(CATEGORIES[Object.keys(CATEGORIES)[0]] || []);
-        }
+        setSubcategories(initialSubcategories);
     }, [item, isOpen]);
 
     const handleCategoryChange = (e) => {
