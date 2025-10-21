@@ -4,7 +4,6 @@ import { usePantry } from '../hooks/usePantry';
 
 import Header from '../components/consumption/Header';
 import InventoryPage from '../components/consumption/InventoryPage';
-import DailyLogPage from '../components/consumption/DailyLogPage';
 import ItemModal from '../components/consumption/modals/Item';
 import LogFromInventoryModal from '../components/consumption/modals/LogFromInventory';
 import ConfirmationModal from '../components/consumption/modals/Confirmation';

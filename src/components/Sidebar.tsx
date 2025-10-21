@@ -16,24 +16,21 @@ export default function Sidebar() {
   return (
     <aside className="w-64 shrink-0 bg-white border-r border-transparent">
       <div className="p-4">
-        <div className="text-xl font-semibold mb-6">🍞 Pantry</div>
+        <div className="text-xl font-semibold mb-6">🍞 PantryPal</div>
 
         <nav className="space-y-2">
-          <Link href="#" className="block rounded-xl px-3 py-2 hover:bg-gray-100 transition">
-            Dashboard
+          {/* UPDATED: Link to the new Calorie Log page */}
+          <Link href="/calorieLog" className="block rounded-xl px-3 py-2 hover:bg-gray-100 transition">
+            Calorie Log
           </Link>
-          <Link href="#" className="block rounded-xl px-3 py-2 hover:bg-gray-100 transition">
-            Freezer
-          </Link>
-          <Link href="#" className="block rounded-xl px-3 py-2 hover:bg-gray-100 transition">
-            Fridge
-          </Link>
-          <Link href="#" className="block rounded-xl px-3 py-2 hover:bg-gray-100 transition">
-            Pantry
+          {/* UPDATED: Link to the main inventory page */}
+          <Link href="/" className="block rounded-xl px-3 py-2 hover:bg-gray-100 transition">
+            Inventory
           </Link>
 
           <div className="h-4" />
 
+          {/* This button's functionality can be wired up later */}
           <Link
             href="#"
             className="block rounded-xl px-3 py-2 bg-gray-900 text-white text-center hover:opacity-90 transition"
@@ -54,3 +51,4 @@ export default function Sidebar() {
     </aside>
   );
 }
+
