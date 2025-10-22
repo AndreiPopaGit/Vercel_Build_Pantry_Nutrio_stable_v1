@@ -6,39 +6,34 @@ export const useCalorieLog = () => {
     const [loading, setLoading] = useState(true);
 
     const fetchLogEntries = useCallback(async () => {
-        setLoading(true); // Set loading true at the start of fetch
+        setLoading(true);
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
             console.log("No user logged in, cannot fetch log entries.");
-            setLogEntries([]); // Clear entries if no user
+            setLogEntries([]);
             setLoading(false);
             return;
         };
 
-        // Fetch entries for the logged-in user
         const { data, error } = await supabase
             .from('daily_consumption')
             .select('*')
             .eq('user_id', user.id)
-            // Uncomment the next line to filter for today's date only
-            // .eq('consumed_at', new Date().toISOString().split('T')[0])
-            .order('created_at', { ascending: true }); // Order by creation time
+            .order('created_at', { ascending: true });
 
         if (error) {
             console.error('Error fetching log entries:', error);
             setLogEntries([]);
         } else {
-            setLogEntries(data || []); // Ensure it's an array even if data is null
+            setLogEntries(data || []);
         }
-        setLoading(false); // Set loading false after fetch completes
+        setLoading(false);
     }, []);
 
-    // Fetch data when the component mounts
     useEffect(() => {
         fetchLogEntries();
     }, [fetchLogEntries]);
 
-    // CREATE or UPDATE a log entry
     const handleSaveLogEntry = async (logData) => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
@@ -46,34 +41,36 @@ export const useCalorieLog = () => {
             return;
         }
 
-        // Prepare the payload, ensure numeric values are numbers
+        // Prepare the complete payload for the database
         const payload = {
-            item_id: logData.inventoryItemId || null, // Link to pantry item if applicable
+            item_id: logData.inventoryItemId || null,
             name: logData.name,
             quantity: Number(logData.quantity),
-            unit: logData.unit, // 'pcs' or 'g'
+            unit: logData.unit,
             grams: Number(logData.grams),
             kcal: Number(logData.kcal),
-            protein: Number(logData.protein) || 0, // Default to 0 if not provided
+            protein: Number(logData.protein) || 0,
             fat: Number(logData.fat) || 0,
             carbs: Number(logData.carbs) || 0,
-            consumed_at: logData.date || new Date().toISOString().split('T')[0], // Default to today
+            consumed_at: logData.consumed_at || new Date().toISOString().split('T')[0],
             user_id: user.id,
-            // meal field is not in the db schema, remove it if submitting
-            // meal: logData.meal 
+            meal: logData.meal // Ensure meal is included
         };
-        // Remove meal property if it exists, as it's not in the DB schema
-        delete payload.meal; 
+
+        // Separate id for matching, keep the rest for the update/insert data
+        const { id, ...dataToSave } = payload;
 
         if (logData.id) {
             // --- UPDATE ---
+            // FIX: Use the 'dataToSave' object which *includes* the meal field
             const { error } = await supabase
                 .from('daily_consumption')
-                .update(payload)
-                .eq('id', logData.id);
+                .update(dataToSave)
+                .eq('id', logData.id); // Match by the original id
             if (error) console.error('Error updating log entry:', error);
         } else {
             // --- CREATE ---
+            // Insert the full payload (which includes meal)
             const { error } = await supabase
                 .from('daily_consumption')
                 .insert([payload]);
@@ -82,7 +79,6 @@ export const useCalorieLog = () => {
         await fetchLogEntries(); // Refresh the list
     };
 
-    // DELETE a log entry
     const handleDeleteLogEntry = async (entryId) => {
         const { error } = await supabase
             .from('daily_consumption')
@@ -92,7 +88,6 @@ export const useCalorieLog = () => {
         if (error) {
             console.error('Error deleting log entry:', error);
         } else {
-            // Optimistic UI update
             setLogEntries(current => current.filter(e => e.id !== entryId));
         }
     };
@@ -100,7 +95,7 @@ export const useCalorieLog = () => {
     return {
         logEntries,
         loading,
-        fetchLogEntries, // Expose fetch function if needed for manual refresh
+        fetchLogEntries,
         handleSaveLogEntry,
         handleDeleteLogEntry,
     };

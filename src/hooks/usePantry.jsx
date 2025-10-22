@@ -31,15 +31,17 @@ export const usePantry = () => {
         expiryDate: item.expires_at ? item.expires_at.split('T')[0] : '',
         location: item.storage ? item.storage.charAt(0).toUpperCase() + item.storage.slice(1) : '',
         subcategory: item.subtype,
+         quantity: Number(item.quantity) || 0,
       }));
       setInventory(mappedData);
     }
-    setLoading(false);
+     if (loading) setLoading(false);
   };
 
   // Initial fetch on component mount
   useEffect(() => {
     fetchInventory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /**
@@ -57,27 +59,52 @@ export const usePantry = () => {
       grams: 'g',
       units: 'pcs',
     };
-    const dbUnit = unitMap[itemData.unit] || itemData.unit;
+    // Ensure itemData.unit exists and is a string before calling toLowerCase
+    const dbUnit = itemData.unit ? unitMap[itemData.unit.toLowerCase()] || 'pcs' : 'pcs';
 
-    const payload = {
-      name: itemData.name,
-      storage: itemData.location.toLowerCase(),
-      category: itemData.category,
-      subtype: itemData.subcategory,
-      quantity: itemData.quantity,
-      unit: dbUnit,
-      expires_at: itemData.expiryDate,
-      user_id: user.id,
+    // Prepare payload fields common to both insert and update
+    const commonPayload = {
+        name: itemData.name,
+        storage: itemData.location.toLowerCase(), // 'Fridge' -> 'fridge'
+        category: itemData.category,
+        subtype: itemData.subcategory || null, // Ensure null if empty string or undefined
+        quantity: Number(itemData.quantity),
+        unit: dbUnit,
+        expires_at: itemData.expiryDate || null, // Ensure null if empty string or undefined
     };
 
+
+    let error;
     if (itemData.id) {
-      const { error } = await supabase.from('pantry_items').update(payload).eq('id', itemData.id);
-      if (error) console.error('Error updating item:', error);
+      // --- UPDATE LOGIC ---
+      // FIX: Create a specific payload for update, excluding user_id and potentially id
+      const updatePayload = { ...commonPayload }; 
+      
+      ({ error } = await supabase
+        .from('pantry_items')
+        .update(updatePayload) // Use the specific update payload
+        .eq('id', itemData.id)); // Match the item by its ID
+
+      if (error) console.error('Error updating item:', error?.message);
+
     } else {
-      const { error } = await supabase.from('pantry_items').insert([payload]);
-      if (error) console.error('Error inserting item:', error);
+      // --- CREATE (INSERT) LOGIC ---
+       // Add user_id only for new items
+      const insertPayload = {
+          ...commonPayload,
+          user_id: user.id 
+      };
+      
+      ({ error } = await supabase
+        .from('pantry_items')
+        .insert([insertPayload])); // Use the specific insert payload
+
+      if (error) console.error('Error inserting item:', error?.message);
     }
-    await fetchInventory();
+
+    if (!error) {
+      await fetchInventory(); // Refresh list on success
+    }
   };
 
   /**
@@ -92,9 +119,8 @@ export const usePantry = () => {
     if (error) {
       console.error('Error deleting item:', error);
     } else {
-      // Optimistic UI update for faster response, then re-fetch
+      // Optimistic UI update for faster response
       setInventory(currentInventory => currentInventory.filter(item => item.id !== itemId));
-      await fetchInventory(); 
     }
   };
 
@@ -104,29 +130,36 @@ export const usePantry = () => {
   const handleMoveItem = async (itemId, newLocation) => {
     const { error } = await supabase
       .from('pantry_items')
-      .update({ storage: newLocation.toLowerCase() })
+      .update({ storage: newLocation.toLowerCase() }) // 'Fridge' -> 'fridge'
       .eq('id', itemId);
 
     if (error) {
       console.error('Error moving item:', error);
     } else {
-      await fetchInventory();
+      await fetchInventory(); // Refresh the list
     }
   };
 
-  // --- Daily Log functions are placeholders for the next step ---
-  const handleSaveLogEntry = async (entry) => { console.log("Next step: Save daily log entry", entry); };
-  const handleDeleteLogEntry = async (entryId) => { console.log("Next step: Delete daily log entry", entryId); };
-
   return {
     inventory,
-    logEntries,
     loading,
+    fetchInventory, // Expose fetch function if needed
     handleSaveItem,
     handleDeleteItem,
     handleMoveItem,
-    handleSaveLogEntry,
-    handleDeleteLogEntry,
   };
 };
 
+// Note: Kept logEntries-related functions from previous hook, 
+// assuming they might be used elsewhere or will be replaced by useCalorieLog hook usage.
+// If not needed, they can be removed.
+export const useCombinedPantryAndLog = () => {
+    const pantry = usePantry(); // Assuming usePantry is defined as above
+    const calorieLog = useCalorieLog(); // Assuming useCalorieLog hook exists
+
+    return {
+        ...pantry,
+        ...calorieLog,
+        // You might need combined loading state or specific combined functions here
+    };
+};
