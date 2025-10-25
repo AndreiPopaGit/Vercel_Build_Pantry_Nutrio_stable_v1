@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../../../lib/supabaseClient'; // Adjust path as needed
-import { XIcon } from '../../consumption/SVGIcons'; // Adjust path as needed
+// Import XIcon and a new SearchIcon (assuming you'll add it to SVGIcons.jsx)
+import { XIcon, SearchIcon } from '../../consumption/SVGIcons'; // Adjust path as needed
 import { MEALS } from '../../../constant/categories'; // Adjust path as needed
 
 // Debounce helper
@@ -11,6 +12,7 @@ const debounce = (func, delay) => {
         timeout = setTimeout(() => func(...args), delay);
     };
 };
+
 
 const LogFoodModal = ({ isOpen, onClose, onSave, meal: initialMeal, existingEntry }) => {
     const [searchTerm, setSearchTerm] = useState('');
@@ -147,14 +149,19 @@ const LogFoodModal = ({ isOpen, onClose, onSave, meal: initialMeal, existingEntr
                 <form onSubmit={handleSubmit} className="space-y-4">
                     {!existingEntry && (
                         <div className="relative">
+                            {/* Icon Wrapper */}
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <SearchIcon className="text-gray-400" />
+                            </div>
                             <input
                                 type="text"
                                 placeholder="Search nutrition catalog..."
                                 value={searchTerm}
                                 onChange={(e) => { setSearchTerm(e.target.value); setSelectedFood(null); setName(e.target.value); }}
-                                className="w-full p-2 border-gray-300 border rounded-md"
+                                // Added padding-left to make space for the icon
+                                className="w-full p-2 pl-10 border-gray-300 border rounded-md focus:ring-teal-500 focus:border-teal-500" // Added focus styles
                             />
-                            {isLoading && <div className="p-2 text-sm text-gray-500">Searching...</div>}
+                            {isLoading && <div className="absolute right-2 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">Searching...</div>}
                             {searchResults.length > 0 && (
                                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
                                     {searchResults.map(food => (<div key={food.id} onClick={() => handleSelectFood(food)} className="p-2 hover:bg-gray-100 cursor-pointer text-sm">{food.name}</div>))}
@@ -163,6 +170,7 @@ const LogFoodModal = ({ isOpen, onClose, onSave, meal: initialMeal, existingEntr
                         </div>
                     )}
 
+                     {/* Rest of the form remains the same */}
                      <input type="text" name="name" placeholder="Food Name" value={name} onChange={(e) => { setName(e.target.value); if (selectedFood && e.target.value !== selectedFood.name) setSelectedFood(null); }} className="w-full p-2 border-gray-300 border rounded-md" required />
 
                     <div className="flex items-center space-x-2">
